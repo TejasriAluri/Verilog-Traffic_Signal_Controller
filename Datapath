@@ -1,0 +1,33 @@
+module timer #(
+    parameter DURATION = 50000000 
+) (
+    input wire clk,
+    input wire reset,
+    input wire start_timer,
+    output reg timer_done
+);
+
+    reg [$clog2(DURATION)-1:0] count;
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            count <= 0;
+            timer_done <= 1'b0;
+        // The timer only counts if the start signal is high
+        end else if (start_timer) begin
+            // Check if the count has reached its final value
+            if (count == DURATION - 1) begin
+                timer_done <= 1'b1; // Signal that we are done
+                count <= count;      // Hold the count at max
+            end else begin
+                count <= count + 1;  // Otherwise, keep counting
+                timer_done <= 1'b0;
+            end
+        // If the start signal is low, reset the timer
+        end else begin
+            count <= 0;
+            timer_done <= 1'b0;
+        end
+    end
+
+endmodule
