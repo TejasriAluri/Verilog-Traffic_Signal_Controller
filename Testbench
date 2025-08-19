@@ -1,0 +1,71 @@
+`timescale 1ns/1ps
+
+module traffic_controller_tb;
+
+    // Parameters 
+    parameter LONG_DURATION  = 250;  
+    parameter SHORT_DURATION = 40;   
+    parameter CLK_PERIOD     = 10;   
+
+    //  Signals
+    reg clk;
+    reg reset;
+    reg vehicle_sensor;
+    wire main_g, main_y, main_r;
+    wire side_g, side_y, side_r;
+
+    // Instantiate DUT 
+    traffic_controller_top #(
+        .LONG_TIMER_CYCLES(LONG_DURATION),
+        .SHORT_TIMER_CYCLES(SHORT_DURATION)
+    ) dut (
+        .clk(clk),
+        .reset(reset),
+        .vehicle_sensor(vehicle_sensor),
+        .main_green(main_g), .main_yellow(main_y), .main_red(main_r),
+        .side_green(side_g), .side_yellow(side_y), .side_red(side_r)
+    );
+
+    //  Clock Generation 
+    initial begin
+        clk = 0;
+        forever #(CLK_PERIOD/2) clk = ~clk;
+    end
+    initial begin
+        $monitor("T=%0t | Reset=%b | Veh_Sensor=%b || Main[G=%b Y=%b R=%b] || Side[G=%b Y=%b R=%b]",
+                  $time, reset, vehicle_sensor,
+                  main_g, main_y, main_r,
+                  side_g, side_y, side_r);
+    end
+    initial begin
+        $display("Starting Traffic Controller Simulation.");
+        reset = 1;
+        vehicle_sensor = 0;
+        #100;
+        reset = 0;
+
+        // Testcase 1: Main Green
+        $display("Main street green, side red...");
+        #(LONG_DURATION*CLK_PERIOD + 200);
+
+        // Testcase 2: Main Yellow
+        $display("Main yellow, side red...");
+        #(SHORT_DURATION*CLK_PERIOD + 200);
+
+        // Car arrives on side street
+        $display("Car arrives on side street sensor!");
+        vehicle_sensor = 1;
+        // testcase 3: Side Green
+        #(LONG_DURATION*CLK_PERIOD + 200);
+
+        // testcase 4: Side Yellow
+        #(SHORT_DURATION*CLK_PERIOD + 200);
+        $display("Back to main green.");
+        #2000;
+        $display("Simulation Finished.");
+        $finish;
+    end
+
+endmodule
+
+
