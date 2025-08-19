@@ -1,0 +1,101 @@
+module controller (
+    // Input signals 
+    input wire clk,
+    input wire reset,
+    input wire vehicle_on_side,  // Vs: Sensor for a car on the side street
+    input wire long_timer_done,  // TL: 25s timer has done
+    input wire short_timer_done, // TS: 4s timer has done
+
+    // Output signals to control the lights and datapath
+    output reg start_long_timer,
+    output reg start_short_timer,
+    output reg main_green, main_yellow, main_red,
+    output reg side_green, side_yellow, side_red
+);
+
+    // State Definitions 
+    parameter STATE_MAIN_GREEN = 2'b00; // First state
+    parameter STATE_MAIN_YELLOW = 2'b01; // Second state
+    parameter STATE_SIDE_GREEN = 2'b11; // Third state
+    parameter STATE_SIDE_YELLOW = 2'b10; // Fourth state
+
+    //  State Registers 
+    reg [1:0] currentState;
+    reg [1:0] nextState;
+
+    // Current State Logic 
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            currentState <= STATE_MAIN_GREEN;
+        end else begin
+            currentState <= nextState;
+        end
+    end
+
+    // Next State Logic 
+
+    always @(*) begin
+        nextState = currentState; 
+
+        case (currentState)
+            STATE_MAIN_GREEN: begin
+                if (long_timer_done && vehicle_on_side) begin
+                    nextState = STATE_MAIN_YELLOW;
+                end
+            end
+
+            STATE_MAIN_YELLOW: begin
+                if (short_timer_done) begin
+                    nextState = STATE_SIDE_GREEN;
+                end
+            end
+
+            STATE_SIDE_GREEN: begin
+                if (long_timer_done || !vehicle_on_side) begin
+                    nextState = STATE_SIDE_YELLOW;
+                end
+            end
+
+            STATE_SIDE_YELLOW: begin
+                if (short_timer_done) begin
+                    nextState = STATE_MAIN_GREEN;
+                end
+            end
+        endcase
+    end
+
+    // Output Logic 
+    always @(*) begin
+        start_long_timer = 1'b0;
+        start_short_timer = 1'b0;
+        main_green  = 1'b0; main_yellow = 1'b0; main_red    = 1'b0;
+        side_green  = 1'b0; side_yellow = 1'b0; side_red    = 1'b0;
+
+        case (currentState)
+            STATE_MAIN_GREEN: begin
+                main_green = 1'b1;
+                side_red = 1'b1;
+                start_long_timer = 1'b1; 
+            end
+
+            STATE_MAIN_YELLOW: begin
+                main_yellow = 1'b1;
+                side_red = 1'b1;
+                start_short_timer = 1'b1;
+            end
+
+            STATE_SIDE_GREEN: begin
+                main_red = 1'b1;
+                side_green = 1'b1;
+                start_long_timer = 1'b1;
+            end
+
+            STATE_SIDE_YELLOW: begin
+                main_red = 1'b1;
+                side_yellow = 1'b1;
+                start_short_timer = 1'b1;
+            end
+        endcase
+    end
+
+endmodule
