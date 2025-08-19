@@ -1,0 +1,52 @@
+module traffic_controller_top #(
+    parameter LONG_TIMER_CYCLES  = 1250000000, 
+    parameter SHORT_TIMER_CYCLES = 200000000  
+) (
+    input wire clk,
+    input wire reset,
+    input wire vehicle_sensor,
+
+    output wire main_green, main_yellow, main_red,
+    output wire side_green, side_yellow, side_red
+);
+
+    // Internal wires to connect the modules
+    wire long_timer_done_signal;
+    wire short_timer_done_signal;
+    wire start_long_timer_signal;
+    wire start_short_timer_signal;
+
+    // Instantiate the Controller 
+    controller control_unit (
+        .clk(clk),
+        .reset(reset),
+        .vehicle_on_side(vehicle_sensor),
+        .long_timer_done(long_timer_done_signal),
+        .short_timer_done(short_timer_done_signal),
+        .start_long_timer(start_long_timer_signal),
+        .start_short_timer(start_short_timer_signal),
+        .main_green(main_green), .main_yellow(main_yellow), .main_red(main_red),
+        .side_green(side_green), .side_yellow(side_yellow), .side_red(side_red)
+    );
+
+    // Instantiate the Long Timer 
+    timer #(
+        .DURATION(LONG_TIMER_CYCLES)
+    ) long_timer_unit (
+        .clk(clk),
+        .reset(reset),
+        .start_timer(start_long_timer_signal),
+        .timer_done(long_timer_done_signal)
+    );
+
+    // Instantiate the Short Timer
+    timer #(
+        .DURATION(SHORT_TIMER_CYCLES)
+    ) short_timer_unit (
+        .clk(clk),
+        .reset(reset),
+        .start_timer(start_short_timer_signal),
+        .timer_done(short_timer_done_signal)
+    );
+
+endmodule
